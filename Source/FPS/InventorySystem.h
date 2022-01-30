@@ -1,8 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
+#include "BaseInventoryItem.h"
 #include "Components/ActorComponent.h"
 #include "InventorySystem.generated.h"
 
@@ -13,16 +12,27 @@ class FPS_API UInventorySystem : public UActorComponent
 	GENERATED_BODY()
 
 public:	
-	// Sets default values for this component's properties
 	UInventorySystem();
 
 protected:
-	// Called when the game starts
 	virtual void BeginPlay() override;
 
 public:	
-	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
-		
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TMap<ABaseInventoryItem*, int32> InventoryItems;
+
+	UPROPERTY(EditDefaultsOnly)
+	float DropDistance;
+
+	UFUNCTION(BlueprintCallable)
+	void AddSlot(ABaseInventoryItem* item, int32 count);
+
+	UFUNCTION(BlueprintCallable)
+	void UseItem(ABaseInventoryItem* item);
+
+	UFUNCTION(BlueprintCallable)
+	void DropItem(ABaseInventoryItem* item);
+	
 };

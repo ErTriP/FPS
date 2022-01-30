@@ -1,34 +1,61 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "InventorySystem.h"
 
-// Sets default values for this component's properties
+#include "FPSCharacter.h"
+
 UInventorySystem::UInventorySystem()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = true;
 
-	// ...
+	DropDistance = 100.f;
 }
 
 
-// Called when the game starts
 void UInventorySystem::BeginPlay()
 {
 	Super::BeginPlay();
-
-	// ...
-	
 }
 
-
-// Called every frame
 void UInventorySystem::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+}
 
-	// ...
+void UInventorySystem::AddSlot(ABaseInventoryItem* item, int32 count)
+{
+	item->TeleportTo(FVector(0,0,0), FRotator(0,0,0));
+	item->GetBoxCollision()->Deactivate();
+	if(InventoryItems.Contains(item))
+	{
+		InventoryItems[item] += count;
+	}else
+	{
+		InventoryItems.Add(item, count);
+	}
+}
+
+
+void UInventorySystem::UseItem(ABaseInventoryItem* item)
+{
+	if (InventoryItems.Contains(item))
+	{
+		item->Use(Cast<AFPSCharacter>(GetOwner()));
+		InventoryItems[item] -= 1;
+		if (InventoryItems[item] <= 0)
+		{
+			InventoryItems.Remove(item);
+			item->Destroy();
+		}
+		
+	}
+	
+}
+
+void UInventorySystem::DropItem(ABaseInventoryItem* item)
+{
+	auto Character = GetOwner();
+	FVector LocationToDrop(Character->GetActorLocation() + Character->GetActorForwardVector() * DropDistance);
+	item->GetBoxCollision()->Activate();
+	item->TeleportTo(LocationToDrop, Character->GetActorRotation());
+	InventoryItems.Remove(item);
 }
 

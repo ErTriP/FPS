@@ -9,6 +9,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "MotionControllerComponent.h"
 #include "XRMotionControllerBase.h" // for FXRMotionControllerBase::RightHandSourceId
+#include "Net/UnrealNetwork.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFPChar, Warning, All);
 
@@ -222,7 +223,29 @@ bool AFPSCharacter::EnableTouchscreenMovement(class UInputComponent* PlayerInput
 	return false;
 }
 
-void AFPSCharacter::AddHealth(float Value)
+void AFPSCharacter::AppleDamage_Implementation(AActor* DamagedActor, float Damage, const UDamageType* DamageType,
+	AController* InstigatedBy, AActor* DamageCauser)
+{
+	CurrentHealth -= Damage;
+	if (CurrentHealth <= 0)
+	{
+		CurrentHealth = 0;
+	}
+}
+
+void AFPSCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME_CONDITION(AFPSCharacter, CurrentHealth, COND_AutonomousOnly);
+}
+
+void AFPSCharacter::OnRep_CurrentHealth()
+{
+	
+}
+
+void AFPSCharacter::AddHealth_Implementation(float Value)
 {
 	if (CurrentHealth + Value >= MaxHealth)
 	{
@@ -234,12 +257,4 @@ void AFPSCharacter::AddHealth(float Value)
 	}
 }
 
-void AFPSCharacter::AppleDamage(AActor* DamagedActor, float Damage,
-	const UDamageType* DamageType, AController* InstigatedBy, AActor* DamageCauser)
-{
-	CurrentHealth -= Damage;
-	if (CurrentHealth <= 0)
-	{
-		CurrentHealth = 0;
-	}
-}
+

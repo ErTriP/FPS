@@ -78,7 +78,7 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	float MaxHealth;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, ReplicatedUsing = OnRep_CurrentHealth)
 	float CurrentHealth;
 
 protected:
@@ -112,14 +112,20 @@ protected:
 
 	bool EnableTouchscreenMovement(UInputComponent* InputComponent);
 
-	UFUNCTION()
+	UFUNCTION(Server, Unreliable)
 	void AppleDamage(AActor* DamagedActor, float Damage, const class UDamageType* DamageType, class AController* InstigatedBy, AActor* DamageCauser );
+
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	UFUNCTION()
+	void OnRep_CurrentHealth();
 
 public:
 	USkeletalMeshComponent* GetMesh1P() const { return Mesh1P; }
 	
 	UCameraComponent* GetFirstPersonCameraComponent() const { return FirstPersonCameraComponent; }
 
+	UFUNCTION(Server, Unreliable)
 	void AddHealth(float Value);
 
 	UFUNCTION(BlueprintCallable)

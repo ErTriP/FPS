@@ -1,18 +1,28 @@
 #include "InventorySystem.h"
 
 #include "FPSCharacter.h"
+#include "Net/UnrealNetwork.h"
 
 UInventorySystem::UInventorySystem()
 {
 	PrimaryComponentTick.bCanEverTick = true;
-
-	DropDistance = 100.f;
+	SetIsReplicated(true);
+	
+	DropDistance = 300.f;
 }
 
 
 void UInventorySystem::BeginPlay()
 {
 	Super::BeginPlay();
+	GetOwner()->OnActorBeginOverlap.AddDynamic(this, &UInventorySystem::Overlap);
+}
+
+void UInventorySystem::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME_CONDITION(UInventorySystem, InventoryItems, COND_AutonomousOnly)
 }
 
 void UInventorySystem::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
@@ -20,42 +30,54 @@ void UInventorySystem::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 }
 
-void UInventorySystem::AddSlot(ABaseInventoryItem* item, int32 count)
+void UInventorySystem::OnRep_InventoryItems()
 {
-	item->TeleportTo(FVector(0,0,0), FRotator(0,0,0));
-	item->GetBoxCollision()->Deactivate();
-	if(InventoryItems.Contains(item))
-	{
-		InventoryItems[item] += count;
-	}else
-	{
-		InventoryItems.Add(item, count);
-	}
+	GEngine->AddOnScreenDebugMessage(-1, 2, FColor::Black, "RepInventory");
 }
 
+void UInventorySystem::AddSlotServer_Implementation(ABaseInventoryItem* item, int32 count)
+{
+	item->SetActorHiddenInGame(true);
+	item->SetActorEnableCollision(false);
+	item->SetActorLocationAndRotation(FVector(0,0,0), GetOwner()->GetActorRotation());
+	SetActorLocAndRotMulticast(item, FVector(0,0,0), GetOwner()->GetActorRotation());
+	InventoryItems.Add(item);
+}
 
 void UInventorySystem::UseItem(ABaseInventoryItem* item)
 {
 	if (InventoryItems.Contains(item))
 	{
 		item->Use(Cast<AFPSCharacter>(GetOwner()));
-		InventoryItems[item] -= 1;
-		if (InventoryItems[item] <= 0)
-		{
-			InventoryItems.Remove(item);
-			item->Destroy();
-		}
+		InventoryItems.Remove(item);
+		item->Destroy();
 		
 	}
 	
 }
 
-void UInventorySystem::DropItem(ABaseInventoryItem* item)
+void UInventorySystem::DropItemServer_Implementation(ABaseInventoryItem* item)
 {
 	auto Character = GetOwner();
 	FVector LocationToDrop(Character->GetActorLocation() + Character->GetActorForwardVector() * DropDistance);
-	item->GetBoxCollision()->Activate();
-	item->TeleportTo(LocationToDrop, Character->GetActorRotation());
+	item->SetActorHiddenInGame(false);
+	item->SetActorLocationAndRotation(LocationToDrop, GetOwner()->GetActorRotation());
+	item->SetActorEnableCollision(true);
+	SetActorLocAndRotMulticast(item, LocationToDrop, GetOwner()->GetActorRotation());
 	InventoryItems.Remove(item);
+}
+
+void UInventorySystem::SetActorLocAndRotMulticast_Implementation(ABaseInventoryItem* item, FVector Loc, FRotator Rot)
+{
+	item->SetActorLocationAndRotation(Loc, Rot);
+}
+
+void UInventorySystem::Overlap(AActor* OverlappedActor, AActor* OtherActor )
+{
+	auto Item = Cast<ABaseInventoryItem>(OtherActor);
+	if(IsValid(Item))
+	{
+		AddSlotServer(Item, 1);
+	}
 }
 

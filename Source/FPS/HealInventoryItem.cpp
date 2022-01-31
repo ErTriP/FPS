@@ -4,6 +4,7 @@
 AHealInventoryItem::AHealInventoryItem()
 {
 	HealAmount = 0.0f;
+	bReplicates = true;
 }
 
 void AHealInventoryItem::BeginPlay()
